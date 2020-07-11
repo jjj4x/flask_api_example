@@ -1,0 +1,10 @@
+.idea
+.git
+.tox
+build
+dist
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+db.sqlite3
