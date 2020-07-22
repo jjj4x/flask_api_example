@@ -2,10 +2,17 @@ from dataclasses import dataclass, field
 from os import environ
 from sys import stderr
 from pathlib import PosixPath
+from importlib import import_module
+from inspect import getmembers, isclass
+from uuid import uuid4
+from logging import Filter
 
-from click import command, option, prompt, echo
-from flask import cli, current_app
-from flask_security import utils
+from apispec import APISpec
+from apispec.ext.marshmallow import MarshmallowPlugin
+from apispec_webframeworks.flask import FlaskPlugin
+from marshmallow import Schema
+from click import command, option
+from flask import cli, current_app, has_request_context, request
 from yaml import FullLoader, load as yaml_load
 
 
@@ -16,8 +23,34 @@ __all__ = [
 ]
 
 
+class OpenAPIMarshmallowPlugin(MarshmallowPlugin):
+    """For future overrides."""
+
+
+class OpenAPIFlaskPlugin(FlaskPlugin):
+    """For future overrides."""
+
+
 def open_api_create():
-    from myapp import OPEN_API, APIMethodView
+    from myapp import APP_PATH, APIMethodView
+
+    with (APP_PATH / 'openapi.yml').open(encoding='utf8') as fd:
+        options = yaml_load(fd, Loader=FullLoader)
+
+    open_api = APISpec(
+        title=options['info'].pop('title'),
+        version=options['info'].pop('version'),
+        openapi_version=options.pop('openapi'),
+        plugins=[
+            OpenAPIMarshmallowPlugin(),
+            OpenAPIFlaskPlugin(),
+        ],
+        **options,
+    )
+
+    for name, obj in getmembers(import_module('myapp.schemas')):
+        if (isclass(obj) and issubclass(obj, Schema)) or isinstance(obj, Schema):
+            open_api.components.schema(obj.__name__, schema=obj)
 
     with current_app.test_request_context():
         for view_function in current_app.view_functions.values():
@@ -25,7 +58,9 @@ def open_api_create():
                 getattr(view_function, 'view_class', False)
                 and issubclass(view_function.view_class, APIMethodView)
             ):
-                OPEN_API.path(view=view_function)
+                open_api.path(view=view_function)
+
+    return open_api
 
 
 @command(name='open-api-dump')
@@ -36,9 +71,9 @@ def open_api_dump(filename):  # noqa: WPS216
     Flask CLI open-api-dump command.
 
     """
-    from myapp import OPEN_API, json_dump
+    from myapp import json_dump
 
-    open_api_create()
+    open_api = open_api_create()
 
     file = PosixPath(filename)
     if file.is_dir():
@@ -48,7 +83,7 @@ def open_api_dump(filename):  # noqa: WPS216
         file = file.with_name(file.name + '.json')
 
     with file.open(encoding='utf8', mode='w') as fd:
-        json_dump(OPEN_API.to_dict(), fd)
+        json_dump(open_api.to_dict(), fd)
 
     pass
 
@@ -61,13 +96,13 @@ def open_api_check(is_print):  # noqa: WPS216
     Flask CLI open-api-check command.
 
     """
-    from myapp import OPEN_API, json_dumps
+    from myapp import json_dumps
 
-    # May throw
-    open_api_create()
+    # May raise an exception and exit with non-zero code
+    open_api = open_api_create()
 
     if is_print:
-        print(json_dumps(OPEN_API.to_dict()), file=stderr)
+        print(json_dumps(open_api.to_dict()), file=stderr)
 
 
 @dataclass
@@ -92,17 +127,25 @@ class APIConfig:
         'disable_existing_loggers': False,
         'formatters': {
             'root': {
-                'format': 'MYAPP[{process}] [{levelname}] [{name}] {message}',
+                'format': 'MYAPP[{process}] [{levelname}] [{name}] [{connection_id}] {message}',
                 'datefmt': '%Y-%m-%dT%H:%M:%S',  # noqa: WPS323
                 'style': '{',
                 'class': 'logging.Formatter',
             },
+        },
+        'filters': {
+            'connection_id_filter': {
+                '()': 'myapp.config.ConnectionIDLoggingFilter',
+                'connection_id_header': 'X-Connection-ID',
+                'is_generate_if_not_set': True,
+            }
         },
         'handlers': {
             'stream': {
                 'class': 'logging.StreamHandler',
                 'formatter': 'root',
                 'stream': 'ext://sys.stderr',
+                'filters': ['connection_id_filter'],
             },
         },
         'root': {
@@ -110,11 +153,19 @@ class APIConfig:
             'level': 'INFO',
         },
         'loggers': {
+            'werkzeug': {
+                'level': 'WARNING',
+                'propagate': True,
+            },
             'flask': {
-                'level': 'DEBUG',
+                'level': 'WARNING',
                 'propagate': True,
             },
             'psycopg2': {
+                'level': 'WARNING',
+                'propagate': True,
+            },
+            'marshmallow': {
                 'level': 'WARNING',
                 'propagate': True,
             },
@@ -135,3 +186,30 @@ class APIConfig:
         """
         with open(conf_filename, 'r', encoding='utf8') as fd:
             return cls(**yaml_load(fd, Loader=FullLoader))
+
+
+class ConnectionIDLoggingFilter(Filter):
+    def __init__(
+        self,
+        connection_id_header='X-Connection-ID',
+        is_generate_if_not_set=True,
+    ):
+        super().__init__()
+        self.connection_id_header = connection_id_header
+        self.is_generate_if_not_set = is_generate_if_not_set
+
+    def filter(self, record):
+        connection_id = None
+        if has_request_context():
+            connection_id = getattr(request, 'connection_id', None)
+            if not connection_id:
+                connection_id = request.headers.get(self.connection_id_header)
+
+            if not connection_id and self.is_generate_if_not_set:
+                connection_id = uuid4()
+
+            request.connection_id = connection_id
+
+        record.connection_id = str(connection_id or 'X')
+
+        return True

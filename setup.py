@@ -59,9 +59,16 @@ if __name__ == '__main__':
             'Flask-Marshmallow[sqlalchemy]',
 
             # Assumed by third-parties
+            'Click',
             'PyYAML',
             'Werkzeug',
         ],
+        extras_require={
+            'development': [
+                'Tox',
+                'PyTest',
+            ]
+        },
         include_package_data=True,
         package_dir={'': 'src'},
         packages=find_packages(where='src'),

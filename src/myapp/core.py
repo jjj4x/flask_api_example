@@ -4,16 +4,11 @@ from json import (
     loads as _json_loads,
 )
 from logging import getLogger
-from pathlib import PosixPath
 
-from apispec import APISpec
-from apispec.ext.marshmallow import MarshmallowPlugin
-from apispec_webframeworks.flask import FlaskPlugin
 from flask import Blueprint, current_app
 from flask.views import MethodView
 from webargs.flaskparser import FlaskParser
-from marshmallow import Schema, fields, pre_dump, RAISE
-from yaml import load, FullLoader
+from marshmallow import Schema, fields, pre_dump, RAISE, EXCLUDE
 
 
 __all__ = [
@@ -29,18 +24,9 @@ __all__ = [
     'json_dumps',
     'json_loads',
     'parse',
-    'OPEN_API',
 ]
 
 log = getLogger(__name__)
-
-
-class APIMethodView(MethodView):
-    """API Method View."""
-
-
-class APIBlueprint(Blueprint):
-    """API Blueprint"""
 
 
 class APIRequestParser(FlaskParser):
@@ -62,12 +48,11 @@ class APIRequestParser(FlaskParser):
             error_status_code=error_status_code,
             error_headers=error_headers,
         )
-        # log_request(req, data)
         return data
 
     def handle_error(self, error, req, schema, *, error_status_code, error_headers):
         raise APIError(
-            'Failed on request parsing',
+            'The request specification is invalid; check OpenAPI docs for more info.',
             metadata={'errors': error.messages},
         )
 
@@ -159,16 +144,24 @@ class APIError(Exception):
 
 
 class APIRequestSchema(Schema):
+    class Meta:
+        unknown = RAISE
+
+
+class APICommonRequestSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
+
     debug_tb_enabled = fields.Boolean(
         required=False,
         default=False,
     )
 
-    class Meta:
-        unknown = RAISE
-
 
 class APIResponseSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
+
     data = fields.Dict(
         required=True,
         default=dict,
@@ -232,25 +225,12 @@ class APIMetadataSchema(Schema):
     )
 
 
-file_spec = {}
-if not file_spec:
-    with (PosixPath(__file__).parent / 'openapi.yml').open(encoding='utf8') as fd:
-        file_spec = load(fd, Loader=FullLoader)
+class APIMethodView(MethodView):
+    """API Method View."""
+    decorators = (
+        parse(APICommonRequestSchema(), location='query'),
+    )
 
-openapi_marshmallow_plugin = MarshmallowPlugin()
-openapi_flask_plugin = FlaskPlugin()
 
-OPEN_API = APISpec(
-    file_spec["info"].pop("title"),
-    file_spec["info"].pop("version"),
-    file_spec.pop("openapi"),
-    plugins=[
-        openapi_flask_plugin,
-        openapi_marshmallow_plugin,
-    ],
-    **file_spec,
-)
-
-# OPEN_API.components.schema('APIRequestSchema', schema=APIRequestSchema)
-# OPEN_API.components.schema('APIResponseSchema', schema=APIResponseSchema)
-# OPEN_API.components.schema('APIMetadataSchema', schema=APIMetadataSchema)
+class APIBlueprint(Blueprint):
+    """API Blueprint"""

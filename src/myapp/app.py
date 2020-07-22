@@ -1,4 +1,4 @@
-from logging import config, getLogger
+from logging import config as logging_config, getLogger
 from os import environ
 from sys import exc_info
 from traceback import format_exc
@@ -21,7 +21,8 @@ from myapp import (
     json_dumps,
 )
 
-SRC_PATH = PosixPath(__file__).parent.parent
+APP_PATH = PosixPath(__file__).parent
+SRC_PATH = APP_PATH.parent
 
 debug_toolbar = DebugToolbarExtension()
 db = SQLAlchemy()
@@ -29,7 +30,6 @@ migrate = Migrate()
 flask_marshmallow = Marshmallow()
 # TODO: Flask Security
 # TODO: Flask JWT
-# TODO: APISpec
 
 log = getLogger(__name__)
 
@@ -60,7 +60,7 @@ class API(Flask):
         else:
             conf = APIConfig()
 
-        config.dictConfig(conf.LOGGING)
+        logging_config.dictConfig(conf.LOGGING)
 
         super().__init__(*args, **kwargs)
 

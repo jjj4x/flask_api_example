@@ -13,14 +13,17 @@ GUYS_BLUEPRINT = APIBlueprint('guys', __name__)
 class GuysView(APIMethodView):
     schema = GuysResponseSchema()
 
-    # @parse(GuysRequestSchema())
-    def get(self, inp):
+    @parse(GuysRequestSchema(), location='query')
+    def get(self, _, r):
         """
-        Guys detail view.
+        Guys detail view and some other info.
 
         ---
         description: Get a gist
         parameters:
+            -
+                in: query
+                schema: APICommonRequestSchema
             -
                 in: query
                 schema: GuysRequestSchema
@@ -32,9 +35,9 @@ class GuysView(APIMethodView):
                         schema: GuysResponseSchema
         """
 
-        if inp['full_name'] == '1':
+        if r['full_name'] == '1':
             return {'hey'}
-        if inp['full_name'] == '2':
+        if r['full_name'] == '2':
             raise RuntimeError('Fail')
-        if inp['full_name'] == '3':
-            return self.schema, {'data': {'identity': inp['full_name']}}
+        if r['full_name'] == '3':
+            return self.schema, {'data': {'identity': r['full_name']}}

@@ -1,40 +1,39 @@
-FROM python:3.7.7-slim-buster as build
+FROM python:3.7.7-slim-buster
 
 MAINTAINER max.preobrazhensky@gmail.com
 
 # setup.py will use them, if they're present
 ARG BRANCH_NAME='master'
 ARG BUILD_NUMBER
+ARG UID=1000
+ARG GID=${UID}
 
-COPY\
-    ./LICENSE\
-    README.rst\
-    MANIFEST.in\
-    setup.py\
+COPY \
+    ./LICENSE \
+    README.rst \
+    MANIFEST.in \
+    setup.py \
     /opt/
 
 COPY ./src /opt/src
 
-RUN pip install --upgrade pip setuptools wheel\
-    && cd /opt/\
-    && python setup.py bdist_wheel -d /build
-
-FROM python:3.7.7-slim-buster
-
-ENV PYTHONUNBUFFERED=1\
-    DEBIAN_FRONTEND=noninteractive
-
-COPY --from=build /build /build
-
-RUN apt update -yqq\
-    && apt upgrade -yqq\
-    && apt install gosu\
-    && pip install --upgrade pip setuptools\
-    && pip install --find-links /build MYAPP\
-    && useradd --system --create-home --user-group --shell /bin/bash myapp
-
 WORKDIR /opt
 
+ENV PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive
+
+ARG PYTHON_DEPS
+
+RUN apt update -yqq \
+    && apt upgrade -yqq \
+    && apt install gosu \
+    && pip install --upgrade pip setuptools ${PYTHON_DEPS} \
+    && pip install --editable '.[development]' \
+    && groupadd --gid ${GID} myapp \
+    && useradd --uid ${UID} --gid ${GID} --create-home --shell /bin/bash myapp
+
 COPY --chown=myapp:myapp ./docker/entrypoint.sh /
+
+USER myapp
 
 ENTRYPOINT ["/entrypoint.sh"]

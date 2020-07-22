@@ -22,11 +22,29 @@ Development
 
 docker run -it --rm -v $(pwd)/src/myapp:/usr/local/lib/python3.7/site-packages/myapp -p 0.0.0.0:5000:5000  -e FLASK_APP=myapp -e SECRET_KEY=1 flask-classful-api python -u -m flask run
 
-Build Docker Image:
+Build development Docker Image:
 
 .. code-block:: bash
 
     docker build --rm --tag flask-classful-api --file docker/Dockerfile .
+
+If your UID/GID isn't equal 1000, then build for a custom UID/GID:
+
+.. code-block:: bash
+
+    docker build --rm --tag flask-classful-api --build-arg UID=4242 --file docker/Dockerfile .
+
+Run Style Guide against the latest code:
+
+.. code-block:: bash
+
+    docker run --rm -it -v $(pwd):/opt flask-classful-api tox -e style-guide
+
+Run Unit Tests against the latest code:
+
+.. code-block:: bash
+
+    docker run --rm -it -v $(pwd):/opt flask-classful-api tox -e unit-tests
 
 A running PostgreSQL is required:
 

@@ -1,6 +1,6 @@
 from marshmallow import Schema, fields
 
-from myapp import APIRequestSchema, APIResponseSchema, OPEN_API
+from myapp import APIRequestSchema, APIResponseSchema
 
 
 class StatsRequestSchema(APIRequestSchema):
@@ -23,8 +23,3 @@ class StatsBodySchema(Schema):
 
 class StatsResponseSchema(APIResponseSchema):
     data = fields.Nested(StatsBodySchema)
-
-
-OPEN_API.components.schema('StatsBodySchema', schema=StatsBodySchema)
-OPEN_API.components.schema('StatsRequestSchema', schema=StatsRequestSchema)
-OPEN_API.components.schema('StatsResponseSchema', schema=StatsResponseSchema)

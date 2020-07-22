@@ -1,14 +1,9 @@
 #!/bin/bash
 
 pwd
-ls
 
-if [ "${DEBUG}x" != "x" ]; then
-  echo '*******************************DEBUG mode*******************************'
-  pip uninstall -y myapp
-  pip install -e .
+if [ -d "./src" ]; then
+  find ./src -regex '^.*\(__pycache__\|\.py[co]\)$' -delete
 fi
 
-# TODO: cleanup pyc
-
-gosu myapp "$@"
+exec "$@"
