@@ -6,6 +6,7 @@ from importlib import import_module
 from inspect import getmembers, isclass
 from uuid import uuid4
 from logging import Filter
+from typing import MutableMapping
 
 from apispec import APISpec
 from apispec.ext.marshmallow import MarshmallowPlugin
@@ -111,11 +112,27 @@ class APIConfig:
         default=environ.get('SECRET_KEY'),
     )
 
-    SQLALCHEMY_ECHO = False
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # https://flask-sqlalchemy.palletsprojects.com/en/2.x/config/
+    # https://docs.sqlalchemy.org/en/13/core/engines.html#sqlalchemy.create_engine
+    SQLALCHEMY_ECHO: bool = field(default=False)
+    SQLALCHEMY_RECORD_QUERIES: bool = field(default=False)
+    SQLALCHEMY_TRACK_MODIFICATIONS: bool = field(default=False)
+    SQLALCHEMY_DATABASE_URI: str = field(
+        default=environ.get(
+            'SQLALCHEMY_DATABASE_URI',
+            'postgresql://postgres:postgres@postgres:5432/dev',
+        ),
+    )
+    SQLALCHEMY_POOL_SIZE: int = field(default=5)
+    SQLALCHEMY_ENGINE_OPTIONS: MutableMapping = field(
+        default_factory=lambda: {
+            'isolation_level': 'READ_COMMITTED',
+        }
+    )
 
     DEBUG_TB_ENABLED: bool = field(default=True)
 
+    # API
     TRACEBACK_ENABLED: bool = field(default=True)
     TRACEBACK_TAIL_LENGTH: int = field(default=15)
     JSON_ENSURE_ASCII: bool = field(default=False)

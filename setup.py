@@ -54,6 +54,7 @@ if __name__ == '__main__':
             # https://marshmallow-sqlalchemy.readthedocs.io/en/latest/
             'Flask-SQLAlchemy',
             # https://flask-migrate.readthedocs.io/en/latest/
+            # https://alembic.sqlalchemy.org/en/latest/index.html
             'Flask-Migrate',
             # https://flask-marshmallow.readthedocs.io/en/latest/
             'Flask-Marshmallow[sqlalchemy]',
