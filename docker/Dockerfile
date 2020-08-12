@@ -24,13 +24,27 @@ ENV PYTHONUNBUFFERED=1 \
 
 ARG PYTHON_DEPS
 
-RUN apt update -yqq \
-    && apt upgrade -yqq \
-    && apt install gosu \
+RUN build_deps=' \
+        build-essential \
+    ' \
+    && apt-get update -yqq \
+    && apt-get upgrade -yqq \
+    && apt-get install -yqq --no-install-recommends ${build_deps} libpq-dev \
     && pip install --upgrade pip setuptools ${PYTHON_DEPS} \
     && pip install --editable '.[development]' \
     && groupadd --gid ${GID} myapp \
-    && useradd --uid ${UID} --gid ${GID} --create-home --shell /bin/bash myapp
+    && useradd --uid ${UID} --gid ${GID} --create-home --shell /bin/bash myapp \
+    && apt-get purge --auto-remove -yqq ${build_deps} \
+    && apt-get autoremove -yqq --purge \
+    && apt-get clean \
+    && rm -rf \
+        /var/lib/apt/lists/* \
+        /tmp/* \
+        /var/tmp/* \
+        /usr/share/man \
+        /usr/share/doc \
+        /usr/share/doc-base \
+        /root/.cache/*
 
 COPY --chown=myapp:myapp ./docker/entrypoint.sh /
 

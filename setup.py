@@ -28,7 +28,12 @@ if __name__ == '__main__':
         long_description=long_description,
         python_requires='>=3.7',
         install_requires=[
+            'Psycopg2',
+
+            'PyJWT',
+
             # https://www.sqlalchemy.org/
+            # https://alembic.sqlalchemy.org/en/latest/tutorial.html
             'SQLAlchemy',
 
             # https://marshmallow.readthedocs.io/en/stable/index.html
@@ -49,8 +54,6 @@ if __name__ == '__main__':
             'Flask-DebugToolbar',
             # https://flask-security-too.readthedocs.io/en/stable/
             'Flask-Security-Too',
-            # https://flask-jwt-extended.readthedocs.io/en/stable/
-            'Flask-JWT',
             # https://marshmallow-sqlalchemy.readthedocs.io/en/latest/
             'Flask-SQLAlchemy',
             # https://flask-migrate.readthedocs.io/en/latest/

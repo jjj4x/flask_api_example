@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from datetime import timedelta
 from os import environ
 from sys import stderr
 from pathlib import PosixPath
@@ -6,7 +7,7 @@ from importlib import import_module
 from inspect import getmembers, isclass
 from uuid import uuid4
 from logging import Filter
-from typing import MutableMapping
+from typing import MutableMapping, Sequence
 
 from apispec import APISpec
 from apispec.ext.marshmallow import MarshmallowPlugin
@@ -24,6 +25,7 @@ __all__ = [
 ]
 
 
+# -----------------------------------OPENAPI-----------------------------------
 class OpenAPIMarshmallowPlugin(MarshmallowPlugin):
     """For future overrides."""
 
@@ -62,8 +64,10 @@ def open_api_create():
                 open_api.path(view=view_function)
 
     return open_api
+# -----------------------------------OPENAPI-----------------------------------
 
 
+# -------------------------------------CLI-------------------------------------
 @command(name='open-api-dump')
 @option('--filename', help='filename', default='myapp_open_api.json')
 @cli.with_appcontext
@@ -86,8 +90,6 @@ def open_api_dump(filename):  # noqa: WPS216
     with file.open(encoding='utf8', mode='w') as fd:
         json_dump(open_api.to_dict(), fd)
 
-    pass
-
 
 @command(name='open-api-check')
 @option('--print', help='print into stderr', is_flag=True, default=False)
@@ -104,19 +106,30 @@ def open_api_check(is_print):  # noqa: WPS216
 
     if is_print:
         print(json_dumps(open_api.to_dict()), file=stderr)
+# -------------------------------------CLI-------------------------------------
 
 
+# ------------------------------APPLICATION CONFIG------------------------------
 @dataclass
 class APIConfig:
-    SECRET_KEY: str = field(
-        default=environ.get('SECRET_KEY'),
-    )
+    SECRET_KEY: str = field(default=environ.get('SECRET_KEY'))
+
+    JWT_DEFAULT_REALM: str = 'Login Required'
+    JWT_AUTH_HEADER_PREFIX: str = 'JWT'
+    JWT_ALGORITHM: str = 'HS256'
+    JWT_LEEWAY: timedelta = timedelta(seconds=10)
+    JWT_VERIFY: bool = True
+    JWT_VERIFY_EXPIRATION: bool = True
+    JWT_VERIFY_CLAIMS: Sequence = ('signature', 'exp', 'nbf', 'iat')
+    JWT_REQUIRED_CLAIMS: Sequence = ('exp', 'iat', 'nbf')
+    JWT_EXPIRATION_DELTA: timedelta = timedelta(seconds=300)
+    JWT_NOT_BEFORE_DELTA: timedelta = timedelta(seconds=0)
 
     # https://flask-sqlalchemy.palletsprojects.com/en/2.x/config/
     # https://docs.sqlalchemy.org/en/13/core/engines.html#sqlalchemy.create_engine
-    SQLALCHEMY_ECHO: bool = field(default=False)
-    SQLALCHEMY_RECORD_QUERIES: bool = field(default=False)
-    SQLALCHEMY_TRACK_MODIFICATIONS: bool = field(default=False)
+    SQLALCHEMY_ECHO: bool = False
+    SQLALCHEMY_RECORD_QUERIES: bool = False
+    SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
     SQLALCHEMY_DATABASE_URI: str = field(
         default=environ.get(
             'SQLALCHEMY_DATABASE_URI',
@@ -125,19 +138,17 @@ class APIConfig:
     )
     SQLALCHEMY_POOL_SIZE: int = field(default=5)
     SQLALCHEMY_ENGINE_OPTIONS: MutableMapping = field(
-        default_factory=lambda: {
-            'isolation_level': 'READ_COMMITTED',
-        }
+        default_factory=lambda: {'isolation_level': 'READ_COMMITTED'}
     )
 
-    DEBUG_TB_ENABLED: bool = field(default=True)
+    DEBUG_TB_ENABLED: bool = True
 
     # API
-    TRACEBACK_ENABLED: bool = field(default=True)
-    TRACEBACK_TAIL_LENGTH: int = field(default=15)
-    JSON_ENSURE_ASCII: bool = field(default=False)
-    JSON_SORT_KEYS: bool = field(default=True)
-    JSON_INDENT: int = field(default=4)
+    TRACEBACK_ENABLED: bool = True
+    TRACEBACK_TAIL_LENGTH: int = 15
+    JSON_ENSURE_ASCII: bool = False
+    JSON_SORT_KEYS: bool = True
+    JSON_INDENT: int = 4
 
     LOGGING: dict = field(default_factory=lambda: {
         'version': 1,
@@ -203,8 +214,10 @@ class APIConfig:
         """
         with open(conf_filename, 'r', encoding='utf8') as fd:
             return cls(**yaml_load(fd, Loader=FullLoader))
+# ------------------------------APPLICATION CONFIG------------------------------
 
 
+# ------------------------TOP LEVEL SETTINGS AND HELPERS------------------------
 class ConnectionIDLoggingFilter(Filter):
     def __init__(
         self,
@@ -230,3 +243,4 @@ class ConnectionIDLoggingFilter(Filter):
         record.connection_id = str(connection_id or 'X')
 
         return True
+# ------------------------TOP LEVEL SETTINGS AND HELPERS------------------------

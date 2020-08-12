@@ -2,9 +2,8 @@ from logging import config as logging_config, getLogger
 from os import environ
 from sys import exc_info
 from traceback import format_exc
-from pathlib import PosixPath
 
-from flask import Flask, signals, request, Response
+from flask import Flask, signals, request
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
@@ -12,6 +11,7 @@ from flask_migrate import Migrate
 from werkzeug import exceptions
 
 from myapp import (
+    APP_PATH,
     APIError,
     APIResponseSchema,
     APIConfig,
@@ -19,36 +19,19 @@ from myapp import (
     JSONEncoder,
     JSONDecoder,
     json_dumps,
+    log_request,
+    log_response,
 )
 
-APP_PATH = PosixPath(__file__).parent
-SRC_PATH = APP_PATH.parent
+LOG = getLogger(__name__)
 
+# ----------------------------------EXTENSIONS----------------------------------
 debug_toolbar = DebugToolbarExtension()
 db = SQLAlchemy()
 migrate = Migrate()
 flask_marshmallow = Marshmallow()
 # TODO: Flask Security
-# TODO: Flask JWT
-
-log = getLogger(__name__)
-
-
-def log_request():
-    msg = fr"curl -w '\n' -iX {request.method} '{request.url}' "
-    msg += ''.join(f"-H '{h}:{v}' " for h, v in request.headers.items())
-    if (
-        request.method in ('POST', 'PUT', 'PATCH')
-        and request.headers.get('Content-Type') == 'application/json'
-    ):
-        msg += f"-d '{request.data.decode('utf8')}'"
-    log.info(msg)
-
-
-def log_response(response: Response):
-    if response.is_json:
-        log.info(f'Response: {response.json}')
-    return response
+# ----------------------------------EXTENSIONS----------------------------------
 
 
 class API(Flask):
@@ -152,7 +135,7 @@ class API(Flask):
         return response
 
     def handle_user_exception(self, e):
-        log.exception('User error.')
+        LOG.exception('User error.')
 
         # Generic HTTP Exception
         if isinstance(e, exceptions.HTTPException):
@@ -160,7 +143,7 @@ class API(Flask):
 
         # Custom API Exception
         if isinstance(e, APIError):
-            return self._response(json=e.json)
+            return self._response(json=e.json, http_status=e.http_status)
 
         # Maybe, Third-Party Exception Handler
         handler = self._find_error_handler(e)
@@ -177,7 +160,7 @@ class API(Flask):
         return self._response(status=1, http_status=e.code)
 
     def handle_exception(self, e):
-        log.exception('Unexpected error.')
+        LOG.exception('Unexpected error.')
         return self._response(
             json=self._json_from_uncaught_exception(status=2),
             http_status=exceptions.InternalServerError.code,
@@ -194,15 +177,19 @@ def create_app():
     app.after_request(log_response)
 
     from myapp.views import (
+        AUTH_BLUEPRINT,
+        AuthView,
         GUYS_BLUEPRINT,
         GuysView,
         STATS_BLUEPRINT,
         StatsView,
     )
 
+    AUTH_BLUEPRINT.add_url_rule('/auth', view_func=AuthView.as_view('auth'))
     GUYS_BLUEPRINT.add_url_rule('/guys', view_func=GuysView.as_view('guys'))
     STATS_BLUEPRINT.add_url_rule('/stats', view_func=StatsView.as_view('stats'))
 
+    app.register_blueprint(AUTH_BLUEPRINT, url_prefix='/api/v1')
     app.register_blueprint(GUYS_BLUEPRINT, url_prefix='/api/v1')
     app.register_blueprint(STATS_BLUEPRINT, url_prefix='/api/v1')
 
@@ -211,7 +198,8 @@ def create_app():
 
     db.init_app(app)
 
-    migrate.init_app(app, db=db, directory=SRC_PATH / 'myapp' / 'migrations')
+    migrate.init_app(app, db=db, directory=APP_PATH / 'migrations')
+
     flask_marshmallow.init_app(app)
 
     app.cli.add_command(open_api_dump)

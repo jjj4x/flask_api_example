@@ -52,6 +52,18 @@ A running PostgreSQL is required:
 
     docker-compose up
 
+To auto-generate a new revision file:
+
+.. code-block:: bash
+
+    docker run --rm -it -v $(pwd):/opt flask-classful-api tox -e db migrate
+
+To upgrade to the latest revision:
+
+.. code-block:: bash
+
+    docker run --rm -it -v $(pwd):/opt flask-classful-api tox -e db upgrade
+
 For usage:
 
 .. code-block:: bash

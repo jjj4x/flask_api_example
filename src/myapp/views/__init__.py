@@ -1,3 +1,7 @@
+from .auth import (
+    AUTH_BLUEPRINT,
+    AuthView,
+)
 from .guys import (
     GUYS_BLUEPRINT,
     GuysView,

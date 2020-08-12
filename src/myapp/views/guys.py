@@ -3,6 +3,7 @@ from myapp import (
     APIBlueprint,
     GuysRequestSchema,
     GuysResponseSchema,
+    jwt_required,
     parse,
 )
 
@@ -13,6 +14,7 @@ GUYS_BLUEPRINT = APIBlueprint('guys', __name__)
 class GuysView(APIMethodView):
     schema = GuysResponseSchema()
 
+    @jwt_required()
     @parse(GuysRequestSchema(), location='query')
     def get(self, _, r):
         """
