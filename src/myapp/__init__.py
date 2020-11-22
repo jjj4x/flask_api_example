@@ -1,4 +1,6 @@
+"""MYAPP entrypoint with import order enforcement."""
 # ------------------------------THE ORDER MATTERS!------------------------------
+
 # The <config> shouldn't import other MYAPP modules at the top level.
 # Any other module can import the <config>.
 from myapp.config import *

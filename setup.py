@@ -28,9 +28,13 @@ if __name__ == '__main__':
         long_description=long_description,
         python_requires='>=3.7',
         install_requires=[
+            'BCrypt',
+
             'Psycopg2',
 
             'PyJWT',
+
+            'ItsDangerous',
 
             # https://www.sqlalchemy.org/
             # https://alembic.sqlalchemy.org/en/latest/tutorial.html
@@ -62,7 +66,7 @@ if __name__ == '__main__':
             # https://flask-marshmallow.readthedocs.io/en/latest/
             'Flask-Marshmallow[sqlalchemy]',
 
-            # Assumed by third-parties
+            # Required by third-parties
             'Click',
             'PyYAML',
             'Werkzeug',
@@ -71,6 +75,11 @@ if __name__ == '__main__':
             'development': [
                 'Tox',
                 'PyTest',
+                'PyTest-Flask',
+                'WeMake-Python-StyleGuide',
+                'ISort<5',
+                'Coverage',
+                'Sphinx',
             ]
         },
         include_package_data=True,

@@ -1,4 +1,5 @@
-from dataclasses import dataclass, field
+"""MYAPP configuration utilities."""
+from dataclasses import asdict, dataclass, field
 from datetime import timedelta
 from os import environ
 from sys import stderr
@@ -17,7 +18,6 @@ from click import command, option
 from flask import cli, current_app, has_request_context, request
 from yaml import FullLoader, load as yaml_load
 
-
 __all__ = [
     'APIConfig',
     'open_api_dump',
@@ -35,7 +35,7 @@ class OpenAPIFlaskPlugin(FlaskPlugin):
 
 
 def open_api_create():
-    from myapp import APP_PATH, APIMethodView
+    from myapp import APP_PATH, APIMethodView  # noqa: WPS433
 
     with (APP_PATH / 'openapi.yml').open(encoding='utf8') as fd:
         options = yaml_load(fd, Loader=FullLoader)
@@ -51,13 +51,17 @@ def open_api_create():
         **options,
     )
 
-    for name, obj in getmembers(import_module('myapp.schemas')):
-        if (isclass(obj) and issubclass(obj, Schema)) or isinstance(obj, Schema):
+    for _, obj in getmembers(import_module('myapp.schemas')):
+        if (
+            (isclass(obj) and issubclass(obj, Schema))
+            or isinstance(obj, Schema)
+        ):
             open_api.components.schema(obj.__name__, schema=obj)
 
     with current_app.test_request_context():
         for view_function in current_app.view_functions.values():
             if (
+                # We use only class-based views in the project.
                 getattr(view_function, 'view_class', False)
                 and issubclass(view_function.view_class, APIMethodView)
             ):
@@ -75,8 +79,9 @@ def open_api_dump(filename):  # noqa: WPS216
     """
     Flask CLI open-api-dump command.
 
+    :param filename: OpenAPI filename
     """
-    from myapp import json_dump
+    from myapp import json_dump  # noqa: WPS433
 
     open_api = open_api_create()
 
@@ -98,22 +103,27 @@ def open_api_check(is_print):  # noqa: WPS216
     """
     Flask CLI open-api-check command.
 
+    :param is_print: do printing
     """
-    from myapp import json_dumps
+    from myapp import json_dumps  # noqa: WPS433
 
     # May raise an exception and exit with non-zero code
     open_api = open_api_create()
 
     if is_print:
-        print(json_dumps(open_api.to_dict()), file=stderr)
+        print(json_dumps(open_api.to_dict()), file=stderr)  # noqa: WPS421
 # -------------------------------------CLI-------------------------------------
 
 
 # ------------------------------APPLICATION CONFIG------------------------------
 @dataclass
 class APIConfig:
-    SECRET_KEY: str = field(default=environ.get('SECRET_KEY'))
+    """MYAPP Configuration."""
 
+    SECRET_KEY: str = field(default=environ.get('SECRET_KEY'))
+    SECRET_SALT: str = field(default=environ.get('SECRET_SALT'))
+
+    # **************************************************************************
     JWT_DEFAULT_REALM: str = 'Login Required'
     JWT_AUTH_HEADER_PREFIX: str = 'JWT'
     JWT_ALGORITHM: str = 'HS256'
@@ -122,8 +132,59 @@ class APIConfig:
     JWT_VERIFY_EXPIRATION: bool = True
     JWT_VERIFY_CLAIMS: Sequence = ('signature', 'exp', 'nbf', 'iat')
     JWT_REQUIRED_CLAIMS: Sequence = ('exp', 'iat', 'nbf')
-    JWT_EXPIRATION_DELTA: timedelta = timedelta(seconds=300)
+    JWT_EXPIRATION_DELTA: timedelta = timedelta(days=30)
     JWT_NOT_BEFORE_DELTA: timedelta = timedelta(seconds=0)
+    # **************************************************************************
+
+    # **************************************************************************
+    SECURITY_PASSWORD_HASH: str = field(
+        default=environ.get(
+            'SECURITY_PASSWORD_HASH',
+            'pbkdf2_sha512',
+        ),
+    )
+    SECURITY_PASSWORD_SALT: str = field(default=environ.get('SECRET_SALT'))
+    # no forms so no concept of flashing
+    SECURITY_FLASH_MESSAGES: bool = False
+
+    # We don't use any built-in blueprints
+    SECURITY_URL_PREFIX: None = None
+
+    # Turn on all the great Flask-Security features
+    SECURITY_RECOVERABLE: bool = True
+    SECURITY_TRACKABLE: bool = True
+    SECURITY_CHANGEABLE: bool = True
+    SECURITY_CONFIRMABLE: bool = True
+    SECURITY_REGISTERABLE: bool = True
+    # https://flask-security-too.readthedocs.io/en/stable/configuration.html#unified-signin
+    SECURITY_UNIFIED_SIGNIN: bool = False
+
+    # seconds + days * 24 * 3600
+    SECURITY_CONFIRM_WITHIN: int = field(default=0 + 5 * 24 * 3600)
+
+    # These need to be defined to handle redirects
+    # As defined in the API documentation - they will receive the relevant context
+    SECURITY_POST_CONFIRM_VIEW = '/confirmed'
+    SECURITY_CONFIRM_ERROR_VIEW = '/confirm-error'
+    SECURITY_RESET_VIEW = '/reset-password'
+    SECURITY_RESET_ERROR_VIEW = '/reset-password'
+    # https://flask-security-too.readthedocs.io/en/stable/spa.html
+    SECURITY_REDIRECT_BEHAVIOR = 'spa'
+
+    # CSRF protection is critical for all session-based browser UIs
+
+    # https://flask-security-too.readthedocs.io/en/stable/patterns.html#csrf
+    # enforce CSRF protection for session / browser - but allow token-based
+    # API calls to go through
+    # SECURITY_CSRF_PROTECT_MECHANISMS: List = field(default_factory=list)
+    # SECURITY_CSRF_IGNORE_UNAUTH_ENDPOINTS: bool = True
+
+    # https://flask-security-too.readthedocs.io/en/stable/patterns.html#csrf
+    # Send Cookie with csrf-token. This is the default for Axios and Angular.
+    # SECURITY_CSRF_COOKIE = {"key": "XSRF-TOKEN"}
+    # WTF_CSRF_CHECK_DEFAULT = False
+    # WTF_CSRF_TIME_LIMIT = None
+    # **************************************************************************
 
     # https://flask-sqlalchemy.palletsprojects.com/en/2.x/config/
     # https://docs.sqlalchemy.org/en/13/core/engines.html#sqlalchemy.create_engine
@@ -133,12 +194,12 @@ class APIConfig:
     SQLALCHEMY_DATABASE_URI: str = field(
         default=environ.get(
             'SQLALCHEMY_DATABASE_URI',
-            'postgresql://postgres:postgres@postgres:5432/dev',
+            'postgresql://postgres:postgres@postgres:5432/test',
         ),
     )
     SQLALCHEMY_POOL_SIZE: int = field(default=5)
     SQLALCHEMY_ENGINE_OPTIONS: MutableMapping = field(
-        default_factory=lambda: {'isolation_level': 'READ_COMMITTED'}
+        default_factory=lambda: {'isolation_level': 'READ_COMMITTED'},
     )
 
     DEBUG_TB_ENABLED: bool = True
@@ -166,7 +227,7 @@ class APIConfig:
                 '()': 'myapp.config.ConnectionIDLoggingFilter',
                 'connection_id_header': 'X-Connection-ID',
                 'is_generate_if_not_set': True,
-            }
+            },
         },
         'handlers': {
             'stream': {
@@ -201,6 +262,11 @@ class APIConfig:
     })
 
     def __post_init__(self):
+        """
+        Post-initialize Config object.
+
+        :raises ValueError: when SECRET_KEY is unspecified
+        """
         if not self.SECRET_KEY:
             raise ValueError('Specify SECRET_KEY.')
 
@@ -214,6 +280,14 @@ class APIConfig:
         """
         with open(conf_filename, 'r', encoding='utf8') as fd:
             return cls(**yaml_load(fd, Loader=FullLoader))
+
+    def as_dict(self):
+        """
+        Represent self as dict.
+
+        :return: self as dict
+        """
+        return asdict(self)
 # ------------------------------APPLICATION CONFIG------------------------------
 
 
@@ -228,7 +302,7 @@ class ConnectionIDLoggingFilter(Filter):
         self.connection_id_header = connection_id_header
         self.is_generate_if_not_set = is_generate_if_not_set
 
-    def filter(self, record):
+    def filter(self, record):  # noqa: WPS125
         connection_id = None
         if has_request_context():
             connection_id = getattr(request, 'connection_id', None)

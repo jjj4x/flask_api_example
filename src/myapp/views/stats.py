@@ -1,9 +1,11 @@
+"""Stats controllers."""
 from myapp import APIMethodView, APIBlueprint
 
 STATS_BLUEPRINT = APIBlueprint('stats', __name__)
 
 
 class StatsView(APIMethodView):
+    """Stats resource."""
 
     def get(self):
         """
@@ -22,4 +24,4 @@ class StatsView(APIMethodView):
                     application/json:
                         schema: StatsResponseSchema
         """
-        return {'hey'}
+        return {'hey': self.__class__}

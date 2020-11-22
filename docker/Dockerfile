@@ -20,7 +20,8 @@ COPY ./src /opt/src
 WORKDIR /opt
 
 ENV PYTHONUNBUFFERED=1 \
-    DEBIAN_FRONTEND=noninteractive
+    DEBIAN_FRONTEND=noninteractive \
+    FLASK_APP=myapp
 
 ARG PYTHON_DEPS
 
@@ -34,6 +35,7 @@ RUN build_deps=' \
     && pip install --editable '.[development]' \
     && groupadd --gid ${GID} myapp \
     && useradd --uid ${UID} --gid ${GID} --create-home --shell /bin/bash myapp \
+    && chown -R myapp:myapp /opt \
     && apt-get purge --auto-remove -yqq ${build_deps} \
     && apt-get autoremove -yqq --purge \
     && apt-get clean \

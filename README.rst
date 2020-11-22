@@ -1,5 +1,5 @@
 ===============================
-Flask-Classful REST API Example
+Flask REST API Example
 ===============================
 
 The reference Flask API example provides insight into:
@@ -12,106 +12,96 @@ The reference Flask API example provides insight into:
     * Using Flask-Marshmallow
     * Using APISpec
 
+
 Installation
 ============
 
 Currently the project isn't hosted on PyPI, so you can install it manually.
 
+
 Development
 ===========
 
-docker run -it --rm -v $(pwd)/src/myapp:/usr/local/lib/python3.7/site-packages/myapp -p 0.0.0.0:5000:5000  -e FLASK_APP=myapp -e SECRET_KEY=1 flask-classful-api python -u -m flask run
 
 Build development Docker Image:
 
 .. code-block:: bash
 
-    docker build --rm --tag flask-classful-api --file docker/Dockerfile .
+    tox -e build
 
-If your UID/GID isn't equal 1000, then build for a custom UID/GID:
 
-.. code-block:: bash
-
-    docker build --rm --tag flask-classful-api --build-arg UID=4242 --file docker/Dockerfile .
-
-Run Style Guide against the latest code:
+Spin up the infrastructure:
 
 .. code-block:: bash
 
-    docker run --rm -it -v $(pwd):/opt flask-classful-api tox -e style-guide
+    tox -e up
 
-Run Unit Tests against the latest code:
 
-.. code-block:: bash
-
-    docker run --rm -it -v $(pwd):/opt flask-classful-api tox -e unit-tests
-
-A running PostgreSQL is required:
+Shutdown the infrastructure:
 
 .. code-block:: bash
 
-    docker-compose up
+    tox -e down
 
-To auto-generate a new revision file:
-
-.. code-block:: bash
-
-    docker run --rm -it -v $(pwd):/opt flask-classful-api tox -e db migrate
-
-To upgrade to the latest revision:
-
-.. code-block:: bash
-
-    docker run --rm -it -v $(pwd):/opt flask-classful-api tox -e db upgrade
-
-For usage:
-
-.. code-block:: bash
-
-    pip install .
-
-For development:
-
-.. code-block:: bash
-
-    pip install -e .
-
-The environment variables are required:
-
-.. code-block:: bash
-
-    export SQLALCHEMY_DATABASE_URI=postgresql://postgres:postgres@localhost:5555/postgres
-    export FLASK_APP=myapp.app
 
 Initialize the database:
 
 .. code-block:: bash
 
-    flask db init
+    tox -e init-db
 
-Create superuser account:
 
-.. code-block:: bash
-
-    flask create-user
-
-To collect static into PWD (use COLLECT_STATIC_ROOT to change to location):
+On Models change, make a new migration:
 
 .. code-block:: bash
 
-    flask collect
+    tox -e make-migration
 
-Usage
-=====
 
-Test in CLI:
+Migrate:
 
 .. code-block:: bash
 
-    curl -w '\n' -iX POST http://127.0.0.1:5000/api/v1/auth -H Content-Type:application/json -d '{"name": "buddy", "password": "123"}'
-    curl -w '\n' -iX GET 'http://127.0.0.1:5000/api/v1/users?sort_column=name&flt_name_in_list=mate6,mate7,mate3&flt_roles.name_in_list=zork,bork' -H 'Authorization: Bearer X'
-    curl -w '\n' -iX GET 'http://localhost:5000/api/v1/users?flt_roles_role_name_equals=superuser' -H Authorization:'Bearer X'
+    tox -e migrate
 
-Checkout Flask-Admin in http://127.0.0.1:5000/admin.
 
-Checkout OpenAPI documentation in http://127.0.0.1:5000/apidocs
+Run Style Guide against the latest code:
+
+.. code-block:: bash
+
+    tox -e style-guide
+
+
+Run Unit Tests against the latest code:
+
+.. code-block:: bash
+
+    tox -e unit-tests
+
+
+Run Unit Tests with Coverage:
+
+.. code-block:: bash
+
+    tox -e unit-tests-with-coverage
+
+
+Show the coverage report:
+
+.. code-block:: bash
+
+    tox -e coverage-report
+
+
+Generate documentation from code:
+
+.. code-block:: bash
+
+    tox -e docs
+
+
+Generate OpenAPI JSON specification:
+
+.. code-block:: bash
+
+    tox -e docs-openapi

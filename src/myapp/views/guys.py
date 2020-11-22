@@ -1,4 +1,5 @@
-from myapp import (
+"""Guys controllers."""
+from myapp import (  # noqa: WPS347
     APIMethodView,
     APIBlueprint,
     GuysRequestSchema,
@@ -7,11 +8,12 @@ from myapp import (
     parse,
 )
 
-
 GUYS_BLUEPRINT = APIBlueprint('guys', __name__)
 
 
 class GuysView(APIMethodView):
+    """Guys resource."""
+
     schema = GuysResponseSchema()
 
     @jwt_required()
@@ -36,7 +38,6 @@ class GuysView(APIMethodView):
                     application/json:
                         schema: GuysResponseSchema
         """
-
         if r['full_name'] == '1':
             return {'hey'}
         if r['full_name'] == '2':

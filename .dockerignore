@@ -1,10 +1,15 @@
 .idea
+.pycharm*
+**/.pytest_cache
 .git
 .tox
 build
+docs/build
 dist
 __pycache__
 *.pyc
 *.pyo
 *.pyd
 db.sqlite3
+**/coverage_html
+

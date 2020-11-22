@@ -1,6 +1,13 @@
+"""MYAPP controllers."""
 from .auth import (
     AUTH_BLUEPRINT,
-    AuthView,
+    LoginView,
+    LogoutView,
+    ConfirmationTokenView,
+    ConfirmView,
+    RegisterView,
+    ChangePasswordView,
+    RestorePasswordView,
 )
 from .guys import (
     GUYS_BLUEPRINT,
