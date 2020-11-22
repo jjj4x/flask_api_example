@@ -1,0 +1,39 @@
+openapi: 3.0.2
+
+info:
+  title: Server API
+  version: 1.0.0
+  description: |
+    # MyAPP Server API documentation.
+
+    ## Overview
+
+    This is MyAPP, so what?
+  contact:
+    name: Max Preobrazhensky
+    email: max.preobrazhensky@gmail.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.txt
+
+
+servers:
+  - url: http://localhost:{port}/{basePath}
+    description: The development API server
+    variables:
+      port:
+        enum:
+          - '3000'
+          - '8888'
+        default: '3000'
+      basePath:
+        default: api/v1
+
+paths: {}
+
+components:
+  responses: {}
+  examples: {}
+  headers: {}
+  securitySchemes: {}
+  links: {}

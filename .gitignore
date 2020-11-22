@@ -15,6 +15,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!src/myapp/lib/
 lib64/
 parts/
 sdist/
@@ -41,6 +42,7 @@ pip-delete-this-directory.txt
 htmlcov/
 .tox/
 .nox/
+coverage*
 .coverage
 .coverage.*
 .cache
@@ -104,6 +106,8 @@ celerybeat.pid
 # Environments
 .env
 .venv
+ve/
+virtualenv/
 env/
 venv/
 ENV/
@@ -127,3 +131,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+.idea/
+.pycharm*
+
+static
+!src/myapp/static
+
+*.json
+doc.html
